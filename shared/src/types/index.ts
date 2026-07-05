@@ -54,3 +54,28 @@ export interface CurrentCompany {
   slug: string;
   role: "owner" | "admin" | "member";
 }
+
+/**
+ * Metadata for a file stored in Supabase Storage (Module 4: storage
+ * foundation). Mirrors `backend/app/schemas/file.py::FileMetadata` and the
+ * `files` table (`backend/sql/005_files.sql`) — field names are snake_case
+ * to match the JSON the backend actually sends over the wire.
+ */
+export interface FileMetadata {
+  id: string;
+  company_id: string;
+  storage_bucket: string;
+  storage_path: string;
+  original_filename: string;
+  content_type: string;
+  size_bytes: number;
+  checksum_sha256: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+/** A short-lived URL for downloading a stored file directly from storage. */
+export interface SignedUrlResponse {
+  url: string;
+  expires_in: number;
+}

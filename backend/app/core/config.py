@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
 
+    # --- Storage (Module 4: Storage Foundation) ---
+    STORAGE_BUCKET_NAME: str = "documents"
+    MAX_UPLOAD_FILE_SIZE_BYTES: int = 25 * 1024 * 1024  # 25 MB
+    SIGNED_URL_EXPIRES_IN_SECONDS: int = 300
+
     # --- OpenAI (used starting in the AI module) ---
     OPENAI_API_KEY: str = ""
 
