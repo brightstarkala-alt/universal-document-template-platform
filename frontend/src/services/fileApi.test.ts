@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/apiClient";
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
     get: vi.fn(),
+    upload: vi.fn(),
   },
 }));
 
@@ -35,5 +36,16 @@ describe("fileApi", () => {
     await fileApi.getSignedUrl("file-1");
 
     expect(apiClient.get).toHaveBeenCalledWith("/files/file-1/signed-url");
+  });
+
+  it("uploads a file via POST /files with a multipart body under the 'upload' field", async () => {
+    vi.mocked(apiClient.upload).mockResolvedValue({});
+    const file = new File(["fake pdf"], "invoice.pdf", { type: "application/pdf" });
+
+    await fileApi.upload(file);
+
+    expect(apiClient.upload).toHaveBeenCalledWith("/files", expect.any(FormData));
+    const formData = vi.mocked(apiClient.upload).mock.calls[0][1] as FormData;
+    expect(formData.get("upload")).toBe(file);
   });
 });

@@ -1,7 +1,8 @@
 """
 File metadata schemas.
-Mirrors the `files` table (backend/sql/005_files.sql) and
-`shared/src/types/index.ts` on the frontend — keep all three in sync.
+Mirrors the `files` table (backend/sql/005_files.sql, hardened by
+backend/sql/007_files_upload_hardening.sql) and `shared/src/types/index.ts`
+on the frontend — keep all three in sync.
 """
 
 from datetime import datetime
@@ -15,11 +16,12 @@ class FileMetadata(BaseModel):
     storage_bucket: str
     storage_path: str
     original_filename: str
+    extension: str
     content_type: str
     size_bytes: int
-    checksum_sha256: str | None = None
+    checksum_sha256: str
     uploaded_by: str | None = None
-    created_at: datetime
+    uploaded_at: datetime
 
 
 class SignedUrlResponse(BaseModel):

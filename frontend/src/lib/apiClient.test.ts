@@ -47,4 +47,21 @@ describe("apiClient", () => {
     const headers = requestInit?.headers as Record<string, string>;
     expect(headers.Authorization).toBeUndefined();
   });
+
+  it("sends a FormData body as-is and omits a manual Content-Type header", async () => {
+    vi.mocked(supabase.auth.getSession).mockResolvedValue({
+      data: { session: mockSession() },
+      error: null,
+    });
+    const formData = new FormData();
+    formData.append("upload", new File(["fake pdf"], "invoice.pdf"));
+
+    await apiClient.upload("/files", formData);
+
+    const [, requestInit] = vi.mocked(fetch).mock.calls[0];
+    expect(requestInit?.body).toBe(formData);
+    const headers = requestInit?.headers as Record<string, string>;
+    expect(headers["Content-Type"]).toBeUndefined();
+    expect(headers.Authorization).toBe("Bearer test-access-token");
+  });
 });

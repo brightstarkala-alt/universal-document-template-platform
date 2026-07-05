@@ -40,6 +40,7 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const url = `${env.apiBaseUrl}${path}`;
   const { body, headers, ...rest } = options;
+  const isFormData = body instanceof FormData;
 
   try {
     const {
@@ -49,11 +50,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const response = await fetch(url, {
       ...rest,
       headers: {
-        "Content-Type": "application/json",
+        // FormData sets its own multipart Content-Type (with boundary) —
+        // letting fetch generate that header itself is required.
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
         ...headers,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
     });
 
     const payload = (await response.json()) as ApiResponse<T>;
@@ -88,4 +91,6 @@ export const apiClient = {
     request<T>(path, { ...options, method: "PATCH", body }),
   delete: <T>(path: string, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "DELETE" }),
+  upload: <T>(path: string, formData: FormData, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: "POST", body: formData }),
 };

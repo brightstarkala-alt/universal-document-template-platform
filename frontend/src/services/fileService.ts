@@ -15,4 +15,8 @@ export const fileService = {
   getFile(fileId: string): Promise<FileMetadata> {
     return fileApi.get(fileId);
   },
+
+  uploadFile(file: File): Promise<FileMetadata> {
+    return fileApi.upload(file);
+  },
 };

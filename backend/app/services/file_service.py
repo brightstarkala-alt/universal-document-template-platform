@@ -1,29 +1,32 @@
 """
 Ties file metadata (the `files` table) to objects in Supabase Storage.
 
-This is the layer future modules (Upload Engine, Parser, Template Engine)
-build on:
+This is the layer future modules (Parser, Template Engine) build on:
 
 - `build_storage_path` owns the folder strategy —
   `{company_id}/{file_id}{extension}` — which is also what the
   `storage.objects` RLS policy in backend/sql/006_storage_bucket.sql relies
   on for tenant isolation.
-- `register_file` is the write primitive. No endpoint calls it yet in this
-  module (there is no upload endpoint — that is the Upload Engine module's
-  job); it exists so that module has a single seam to call into.
-- `get_file` / `list_files` / `get_download_url` are read-only and are what
-  `app/api/v1/files.py` exposes today, and every read enforces the
-  company_id ownership check.
+- `register_file` is the write primitive `app/api/v1/files.py`'s
+  `POST /files` (Upload Engine) calls: it validates, uploads to storage,
+  then inserts metadata — in that order, so a failed metadata insert never
+  leaves storage and the `files` table disagreeing about what exists.
+- `get_file` / `list_files` / `get_download_url` are read-only and every
+  read enforces the company_id ownership check.
 """
 
+import hashlib
 import uuid
 
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.logging import get_logger
 from app.core.supabase import get_supabase_admin
 from app.schemas.file import FileMetadata, SignedUrlResponse
 from app.services import storage_service
 from app.services.file_validation_service import validate_file
+
+logger = get_logger(__name__)
 
 
 def build_storage_path(*, company_id: str, file_id: str, extension: str) -> str:
@@ -38,33 +41,50 @@ def register_file(
     content_type: str,
     content: bytes,
 ) -> FileMetadata:
-    """Validates, uploads, and records metadata for a new file."""
+    """Validates, uploads, and records metadata for a new file.
+
+    The object is written to storage before the metadata row is inserted.
+    If the insert fails, the just-uploaded object is removed so storage and
+    the `files` table never disagree about what exists.
+    """
     extension = validate_file(
         filename=original_filename, content_type=content_type, size_bytes=len(content)
     )
+    checksum_sha256 = hashlib.sha256(content).hexdigest()
 
     file_id = str(uuid.uuid4())
     storage_path = build_storage_path(company_id=company_id, file_id=file_id, extension=extension)
 
     storage_service.upload_object(path=storage_path, content=content, content_type=content_type)
 
-    client = get_supabase_admin()
-    response = (
-        client.table("files")
-        .insert(
-            {
-                "id": file_id,
-                "company_id": company_id,
-                "storage_bucket": storage_service.BUCKET_NAME,
-                "storage_path": storage_path,
-                "original_filename": original_filename,
-                "content_type": content_type,
-                "size_bytes": len(content),
-                "uploaded_by": uploaded_by,
-            }
+    try:
+        client = get_supabase_admin()
+        response = (
+            client.table("files")
+            .insert(
+                {
+                    "id": file_id,
+                    "company_id": company_id,
+                    "storage_bucket": storage_service.BUCKET_NAME,
+                    "storage_path": storage_path,
+                    "original_filename": original_filename,
+                    "extension": extension,
+                    "content_type": content_type,
+                    "size_bytes": len(content),
+                    "checksum_sha256": checksum_sha256,
+                    "uploaded_by": uploaded_by,
+                }
+            )
+            .execute()
         )
-        .execute()
-    )
+    except Exception:
+        logger.error(
+            "Failed to record file metadata after upload; removing orphaned object",
+            extra={"storage_path": storage_path},
+        )
+        storage_service.delete_object(path=storage_path)
+        raise
+
     row: dict[str, object] = response.data[0]
     return FileMetadata(**row)  # type: ignore[arg-type]
 
@@ -88,7 +108,7 @@ def list_files(*, company_id: str) -> list[FileMetadata]:
         client.table("files")
         .select("*")
         .eq("company_id", company_id)
-        .order("created_at", desc=True)
+        .order("uploaded_at", desc=True)
         .execute()
     )
     rows: list[dict[str, object]] = response.data or []

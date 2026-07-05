@@ -8,6 +8,7 @@ vi.mock("@/services/fileApi", () => ({
     list: vi.fn(),
     get: vi.fn(),
     getSignedUrl: vi.fn(),
+    upload: vi.fn(),
   },
 }));
 
@@ -17,17 +18,19 @@ const FAKE_FILE: FileMetadata = {
   storage_bucket: "documents",
   storage_path: "company-1/file-1.pdf",
   original_filename: "invoice.pdf",
+  extension: ".pdf",
   content_type: "application/pdf",
   size_bytes: 1024,
-  checksum_sha256: null,
+  checksum_sha256: "deadbeef",
   uploaded_by: "user-1",
-  created_at: "2026-01-01T00:00:00Z",
+  uploaded_at: "2026-01-01T00:00:00Z",
 };
 
 describe("fileService", () => {
   beforeEach(() => {
     vi.mocked(fileApi.list).mockReset();
     vi.mocked(fileApi.get).mockReset();
+    vi.mocked(fileApi.upload).mockReset();
   });
 
   it("listFiles delegates to fileApi.list", async () => {
@@ -45,6 +48,16 @@ describe("fileService", () => {
     const result = await fileService.getFile("file-1");
 
     expect(fileApi.get).toHaveBeenCalledWith("file-1");
+    expect(result).toEqual(FAKE_FILE);
+  });
+
+  it("uploadFile delegates to fileApi.upload", async () => {
+    vi.mocked(fileApi.upload).mockResolvedValue(FAKE_FILE);
+    const file = new File(["fake pdf"], "invoice.pdf", { type: "application/pdf" });
+
+    const result = await fileService.uploadFile(file);
+
+    expect(fileApi.upload).toHaveBeenCalledWith(file);
     expect(result).toEqual(FAKE_FILE);
   });
 });

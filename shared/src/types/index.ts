@@ -57,9 +57,11 @@ export interface CurrentCompany {
 
 /**
  * Metadata for a file stored in Supabase Storage (Module 4: storage
- * foundation). Mirrors `backend/app/schemas/file.py::FileMetadata` and the
- * `files` table (`backend/sql/005_files.sql`) — field names are snake_case
- * to match the JSON the backend actually sends over the wire.
+ * foundation; Module 5: upload engine). Mirrors
+ * `backend/app/schemas/file.py::FileMetadata` and the `files` table
+ * (`backend/sql/005_files.sql`, hardened by
+ * `backend/sql/007_files_upload_hardening.sql`) — field names are
+ * snake_case to match the JSON the backend actually sends over the wire.
  */
 export interface FileMetadata {
   id: string;
@@ -67,11 +69,12 @@ export interface FileMetadata {
   storage_bucket: string;
   storage_path: string;
   original_filename: string;
+  extension: string;
   content_type: string;
   size_bytes: number;
-  checksum_sha256: string | null;
+  checksum_sha256: string;
   uploaded_by: string | null;
-  created_at: string;
+  uploaded_at: string;
 }
 
 /** A short-lived URL for downloading a stored file directly from storage. */
