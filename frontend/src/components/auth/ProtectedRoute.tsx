@@ -1,10 +1,15 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { CompanyProvider } from "@/contexts/CompanyContext";
+import { CompanyGate } from "@/components/company/CompanyGate";
 
 /**
  * Gate for authenticated-only routes. Rendered as a layout route in
  * `App.tsx` so every nested route requires a session without repeating this
  * check in each page component.
+ *
+ * Once a session exists, it also resolves the Current User -> Current
+ * Company step: nested routes only render once a company has loaded.
  */
 export function ProtectedRoute() {
   const { session, isLoading } = useAuth();
@@ -22,5 +27,11 @@ export function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return <Outlet />;
+  return (
+    <CompanyProvider>
+      <CompanyGate>
+        <Outlet />
+      </CompanyGate>
+    </CompanyProvider>
+  );
 }

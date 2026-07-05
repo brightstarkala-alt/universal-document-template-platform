@@ -1,5 +1,6 @@
 import { env } from "@/config/env";
 import { logger } from "@/lib/logger";
+import { supabase } from "@/lib/supabaseClient";
 import type { ApiResponse } from "@udtp/shared";
 
 /**
@@ -8,9 +9,9 @@ import type { ApiResponse } from "@udtp/shared";
  * instead of calling `fetch` directly, so auth headers, error normalization,
  * and base URL handling stay consistent.
  *
- * NOTE (Module 1 scope): no auth token attachment yet — that lands with the
- * Authentication module. This client already normalizes error handling so
- * future modules don't have to.
+ * Every request attaches the current Supabase session's access token (if
+ * any) as a Bearer token, mirroring the backend's `get_current_user`
+ * dependency which expects exactly that.
  */
 
 export class ApiError extends Error {
@@ -41,10 +42,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const { body, headers, ...rest } = options;
 
   try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     const response = await fetch(url, {
       ...rest,
       headers: {
         "Content-Type": "application/json",
+        ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
         ...headers,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

@@ -42,3 +42,15 @@ export interface HealthCheckResponse {
   version: string;
   timestamp: string;
 }
+
+/**
+ * The authenticated user's company (Module 3: multi-tenant foundation).
+ * Every user belongs to exactly one company — see
+ * `backend/sql/002_company_members.sql`.
+ */
+export interface CurrentCompany {
+  id: string;
+  name: string;
+  slug: string;
+  role: "owner" | "admin" | "member";
+}

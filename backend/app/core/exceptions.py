@@ -73,9 +73,10 @@ class ForbiddenError(AppException):
     code = "FORBIDDEN"
 
 
-def _error_body(
+def build_error_body(
     request: Request, code: str, message: str, details: dict[str, Any] | None = None
 ) -> dict[str, Any]:
+    """Shared error envelope builder — also used by TenantContextMiddleware."""
     request_id = getattr(request.state, "request_id", None)
     return {
         "success": False,
@@ -97,7 +98,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
         return JSONResponse(
             status_code=exc.status_code,
-            content=_error_body(request, exc.code, exc.message, exc.details),
+            content=build_error_body(request, exc.code, exc.message, exc.details),
         )
 
     @app.exception_handler(RequestValidationError)
@@ -109,7 +110,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content=_error_body(
+            content=build_error_body(
                 request,
                 "VALIDATION_ERROR",
                 "The request payload failed validation.",
@@ -121,7 +122,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def handle_http_exception(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,
-            content=_error_body(request, "HTTP_ERROR", str(exc.detail)),
+            content=build_error_body(request, "HTTP_ERROR", str(exc.detail)),
         )
 
     @app.exception_handler(Exception)
@@ -133,7 +134,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content=_error_body(
+            content=build_error_body(
                 request,
                 "INTERNAL_SERVER_ERROR",
                 "An unexpected error occurred. Please try again later.",
