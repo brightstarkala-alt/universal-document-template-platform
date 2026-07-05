@@ -1,0 +1,77 @@
+# =============================================================================
+# Development Compose file
+# Spins up: frontend (Vite dev server), backend (FastAPI + hot reload),
+# and an OPTIONAL local Postgres for engineers who want to develop fully
+# offline instead of pointing at a cloud Supabase project.
+#
+# Supabase Auth / Storage themselves are cloud-only services and are not
+# containerized here — set SUPABASE_URL / keys in .env to point at your
+# Supabase project (a free/dev project is recommended per developer or a
+# shared team dev project).
+# =============================================================================
+name: udtp
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: udtp-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - ./shared:/shared
+    environment:
+      - VITE_API_BASE_URL=http://localhost:${BACKEND_PORT:-8000}
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    networks:
+      - udtp-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: udtp-backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      - udtp-network
+
+  # Optional local database for offline development / CI.
+  # Not used in staging/production — those environments use managed Supabase Postgres.
+  postgres:
+    image: postgres:16-alpine
+    container_name: udtp-postgres
+    restart: unless-stopped
+    ports:
+      - "${LOCAL_POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-app_dev}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    profiles:
+      - local-db
+    networks:
+      - udtp-network
+
+networks:
+  udtp-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

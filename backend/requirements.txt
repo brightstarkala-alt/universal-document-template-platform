@@ -1,0 +1,18 @@
+# --- Core framework ---
+fastapi==0.111.1
+uvicorn[standard]==0.30.3
+pydantic==2.8.2
+pydantic-settings==2.3.4
+
+# --- Supabase / Postgres (client only — schema/usage lands in later modules) ---
+supabase==2.5.3
+
+# --- PDF rendering (used starting in the PDF Generation module) ---
+weasyprint==62.3
+
+# --- AI (used starting in the AI module) ---
+openai==1.37.1
+
+# --- Utilities ---
+python-multipart==0.0.9
+httpx==0.27.0

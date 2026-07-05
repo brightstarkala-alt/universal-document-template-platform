@@ -1,0 +1,23 @@
+{
+  "name": "universal-doc-template-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Universal Document Template Platform — monorepo root",
+  "workspaces": [
+    "frontend",
+    "shared"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "lint:frontend": "npm run lint --workspace=frontend",
+    "format:frontend": "npm run format --workspace=frontend",
+    "test:frontend": "npm run test --workspace=frontend",
+    "build:shared": "npm run build --workspace=shared",
+    "prepare": "echo 'Root install complete. See scripts/setup.sh for full environment bootstrap.'"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

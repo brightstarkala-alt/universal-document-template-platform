@@ -1,0 +1,43 @@
+# =============================================================================
+# Production Compose file
+# Builds optimized images (multi-stage) for frontend (static build served via
+# nginx) and backend (gunicorn/uvicorn workers). No local Postgres — production
+# always targets managed Supabase Postgres/Auth/Storage.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
+# =============================================================================
+name: udtp-prod
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    container_name: udtp-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - udtp-network-prod
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: udtp-backend-prod
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    env_file:
+      - ./backend/.env.production
+    environment:
+      - ENVIRONMENT=production
+    networks:
+      - udtp-network-prod
+
+networks:
+  udtp-network-prod:
+    driver: bridge
