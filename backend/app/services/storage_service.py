@@ -20,6 +20,11 @@ def upload_object(*, path: str, content: bytes, content_type: str) -> None:
     client.storage.from_(BUCKET_NAME).upload(path, content, {"content-type": content_type})
 
 
+def download_object(*, path: str) -> bytes:
+    client = get_supabase_admin()
+    return bytes(client.storage.from_(BUCKET_NAME).download(path))
+
+
 def create_signed_url(*, path: str, expires_in: int) -> str:
     client = get_supabase_admin()
     response = client.storage.from_(BUCKET_NAME).create_signed_url(path, expires_in)

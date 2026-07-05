@@ -82,3 +82,31 @@ export interface SignedUrlResponse {
   url: string;
   expires_in: number;
 }
+
+/**
+ * Metadata for one parse attempt (Module 6: parser engine). Mirrors
+ * `backend/app/schemas/parsed_document.py::ParsedDocumentMetadata` and the
+ * `parsed_documents` table (`backend/sql/008_parsed_documents.sql`). The
+ * full Universal Document Model JSON itself is not modeled here — later
+ * modules that consume it (AI Extraction, Template Engine) read it
+ * server-side from `storage_path`, not through this frontend type.
+ */
+export interface ParsedDocumentMetadata {
+  id: string;
+  company_id: string;
+  file_id: string;
+  schema_version: string;
+  parser_name: string;
+  parser_version: string;
+  status: "pending" | "processing" | "completed" | "completed_with_errors" | "failed";
+  storage_path: string | null;
+  unit_count: number | null;
+  text_block_count: number | null;
+  image_count: number | null;
+  cell_grid_count: number | null;
+  cell_count: number | null;
+  character_count: number | null;
+  duration_ms: number | null;
+  error_message: string | null;
+  created_at: string;
+}
