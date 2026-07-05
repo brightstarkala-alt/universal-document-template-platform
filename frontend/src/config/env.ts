@@ -16,8 +16,8 @@ function readEnv(key: keyof ImportMetaEnv, required = false): string {
 
 export const env = {
   apiBaseUrl: readEnv("VITE_API_BASE_URL", true),
-  supabaseUrl: readEnv("VITE_SUPABASE_URL"),
-  supabaseAnonKey: readEnv("VITE_SUPABASE_ANON_KEY"),
+  supabaseUrl: readEnv("VITE_SUPABASE_URL", true),
+  supabaseAnonKey: readEnv("VITE_SUPABASE_ANON_KEY", true),
   mode: import.meta.env.MODE,
   isDev: import.meta.env.DEV,
   isProd: import.meta.env.PROD,

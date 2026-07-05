@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
     "@tanstack/react-query": "^5.51.1",
     "@udtp/shared": "*",
     "react": "^18.3.1",
