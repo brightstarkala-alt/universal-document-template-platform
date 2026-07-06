@@ -110,3 +110,36 @@ export interface ParsedDocumentMetadata {
   error_message: string | null;
   created_at: string;
 }
+
+/**
+ * Metadata for one AI field extraction attempt (Module 7: AI field
+ * extraction). Mirrors `backend/app/schemas/ai_extraction_metadata.py::AIExtractionMetadata`
+ * and the `ai_extractions` table (`backend/sql/009_ai_extractions.sql`).
+ * Every extraction is versioned and append-only — a re-run of the same file
+ * never overwrites a previous `version`. The full extracted fields/tables
+ * JSON itself is not modeled here — later modules that consume it (Template
+ * Engine) read it server-side from `storage_path`, not through this
+ * frontend type. Deliberately excludes any calculated OpenAI dollar cost —
+ * `model` + `prompt_tokens` + `completion_tokens` are stored instead.
+ */
+export interface AIExtractionMetadata {
+  id: string;
+  company_id: string;
+  file_id: string;
+  parsed_document_id: string;
+  version: number;
+  schema_version: string;
+  source_checksum_sha256: string;
+  model: string;
+  prompt_version: string;
+  status: "pending" | "processing" | "completed" | "completed_with_errors" | "failed";
+  storage_path: string | null;
+  field_count: number | null;
+  table_count: number | null;
+  low_confidence_count: number | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  duration_ms: number | null;
+  error_message: string | null;
+  created_at: string;
+}

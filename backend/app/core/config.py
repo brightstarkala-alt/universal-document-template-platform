@@ -41,8 +41,14 @@ class Settings(BaseSettings):
     MAX_UPLOAD_FILE_SIZE_BYTES: int = 25 * 1024 * 1024  # 25 MB
     SIGNED_URL_EXPIRES_IN_SECONDS: int = 300
 
-    # --- OpenAI (used starting in the AI module) ---
+    # --- OpenAI (Module 7: AI Field Extraction) ---
     OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    AI_EXTRACTION_UNIT_BATCH_CHAR_BUDGET: int = 8000
+    """Rough token-budget proxy: units are grouped into one OpenAI call
+    until their serialized candidate+context payload would exceed this many
+    characters, so a large document is chunked instead of sent as one huge
+    prompt."""
 
     @property
     def is_production(self) -> bool:

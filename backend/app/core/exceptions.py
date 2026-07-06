@@ -73,6 +73,23 @@ class ForbiddenError(AppException):
     code = "FORBIDDEN"
 
 
+class AIExtractionError(AppException):
+    """Base class for Module 7 (AI Field Extraction) errors — the failure
+    is upstream (OpenAI) or in reconciling its response, not the caller's
+    request, so it maps to 502 rather than a 4xx."""
+
+    status_code = status.HTTP_502_BAD_GATEWAY
+    code = "AI_EXTRACTION_ERROR"
+
+
+class OpenAIUnavailableError(AIExtractionError):
+    code = "OPENAI_UNAVAILABLE"
+
+
+class ExtractionValidationError(AIExtractionError):
+    code = "EXTRACTION_VALIDATION_ERROR"
+
+
 def build_error_body(
     request: Request, code: str, message: str, details: dict[str, Any] | None = None
 ) -> dict[str, Any]:
