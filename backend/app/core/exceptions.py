@@ -100,6 +100,16 @@ class TemplateGenerationError(AppException):
     code = "TEMPLATE_GENERATION_ERROR"
 
 
+class PDFGenerationError(AppException):
+    """Raised for internal Module 10 (PDF Generation) failures. Like
+    `TemplateGenerationError`, there is no external dependency to retry
+    against (WeasyPrint runs locally) — a failure is either a malformed
+    `TemplateArtifact` or a genuine bug, so it maps to 500 rather than 502."""
+
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    code = "PDF_GENERATION_ERROR"
+
+
 def build_error_body(
     request: Request, code: str, message: str, details: dict[str, Any] | None = None
 ) -> dict[str, Any]:

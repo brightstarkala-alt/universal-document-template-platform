@@ -218,3 +218,79 @@ def test_refresh_asset_url_raises_not_found_when_asset_missing_from_manifest() -
         preview_service.refresh_asset_url(
             company_id="company-1", file_id="file-1", asset_id="does-not-exist"
         )
+
+
+# --- Phase 3 regression coverage: rendering through the shared document_renderer ---
+
+
+def test_get_latest_preview_renders_field_sample_values_unchanged() -> None:
+    """Preview output must be identical to the pre-refactor implementation
+    when using the default ValueMap: every field's rendered text is still
+    exactly its own manifest sample_value."""
+    with (
+        patch(
+            "app.services.preview_service.template_engine_service.get_latest_template",
+            return_value=FAKE_TEMPLATE_METADATA,
+        ),
+        patch(
+            "app.services.preview_service.storage_service.download_object",
+            return_value=_artifact_bytes(),
+        ),
+        patch(
+            "app.services.preview_service.storage_service.create_signed_url",
+            return_value="https://signed.example/asset-1.png",
+        ),
+    ):
+        result = preview_service.get_latest_preview(company_id="company-1", file_id="file-1")
+
+    assert 'data-field-id="f1"' in result.artifact.html
+    assert "INV-1001" in result.artifact.html
+
+
+def test_get_latest_preview_injects_signed_asset_urls_into_html() -> None:
+    """The AssetMap passed to the shared renderer is built from the same
+    freshly-signed URLs returned in `asset_urls` — so the response's
+    `<img>` gains a real `src`, unlike the stored artifact's raw HTML."""
+    with (
+        patch(
+            "app.services.preview_service.template_engine_service.get_latest_template",
+            return_value=FAKE_TEMPLATE_METADATA,
+        ),
+        patch(
+            "app.services.preview_service.storage_service.download_object",
+            return_value=_artifact_bytes(),
+        ),
+        patch(
+            "app.services.preview_service.storage_service.create_signed_url",
+            return_value="https://signed.example/asset-1.png",
+        ),
+    ):
+        result = preview_service.get_latest_preview(company_id="company-1", file_id="file-1")
+
+    assert 'src="https://signed.example/asset-1.png"' in result.artifact.html
+    assert 'data-asset-id="asset-1"' in result.artifact.html
+    assert result.asset_urls == {"asset-1": "https://signed.example/asset-1.png"}
+
+
+def test_get_latest_preview_never_persists_anything_to_storage() -> None:
+    """Rendering happens only on the in-memory response copy — the stored
+    artifact in Storage (and its row in `templates`) must never be
+    written to from this read path."""
+    with (
+        patch(
+            "app.services.preview_service.template_engine_service.get_latest_template",
+            return_value=FAKE_TEMPLATE_METADATA,
+        ),
+        patch(
+            "app.services.preview_service.storage_service.download_object",
+            return_value=_artifact_bytes(),
+        ),
+        patch(
+            "app.services.preview_service.storage_service.create_signed_url",
+            return_value="https://signed.example/asset-1.png",
+        ),
+        patch("app.services.preview_service.storage_service.upload_object") as mock_upload,
+    ):
+        preview_service.get_latest_preview(company_id="company-1", file_id="file-1")
+
+    mock_upload.assert_not_called()

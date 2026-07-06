@@ -323,3 +323,29 @@ export interface TemplatePreviewResponse {
   artifact: TemplateArtifact;
   asset_urls: Record<string, string>;
 }
+
+/**
+ * Metadata for one PDF-generation attempt (Module 10: PDF Generation).
+ * Mirrors `backend/app/schemas/pdf_metadata.py::PDFMetadata` and the
+ * `generated_pdfs` table (`backend/sql/011_generated_pdfs.sql`). Every
+ * PDF is versioned and append-only — a re-run never overwrites a
+ * previous `version`. The PDF binary itself is not modeled here — it
+ * lives in Storage at `storage_path`; fetch a signed URL to download it
+ * via `GET /files/{file_id}/pdf/signed-url`.
+ */
+export interface PDFMetadata {
+  id: string;
+  company_id: string;
+  file_id: string;
+  source_template_id: string;
+  version: number;
+  schema_version: string;
+  generator_version: string;
+  status: "pending" | "processing" | "completed" | "completed_with_errors" | "failed";
+  storage_path: string | null;
+  page_count: number | null;
+  size_bytes: number | null;
+  duration_ms: number | null;
+  error_message: string | null;
+  created_at: string;
+}

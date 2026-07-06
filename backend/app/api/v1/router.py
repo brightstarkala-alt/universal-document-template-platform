@@ -13,6 +13,7 @@ from app.api.v1 import (
     files,
     health,
     parsing,
+    pdf,
     preview,
     template_engine,
 )
@@ -26,3 +27,4 @@ api_router.include_router(parsing.router)
 api_router.include_router(ai_extraction.router)
 api_router.include_router(template_engine.router)
 api_router.include_router(preview.router)
+api_router.include_router(pdf.router)

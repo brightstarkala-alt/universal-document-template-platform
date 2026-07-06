@@ -4,6 +4,8 @@ import type { TemplateManifestField, TemplatePreviewResponse } from "@udtp/share
 import { ApiError } from "@/lib/apiClient";
 import { logger } from "@/lib/logger";
 import { previewService } from "@/services/previewService";
+import { pdfService } from "@/services/pdfService";
+import { triggerDownload } from "@/lib/downloadHelper";
 import {
   applyFieldOverrides,
   attachAssetErrorHandler,
@@ -21,6 +23,11 @@ import { FieldInspectorPanel } from "@/components/preview/FieldInspectorPanel";
  * value override) is DOM manipulation against the neutral `data-*` markers
  * Module 8 already emits; nothing here is a templating engine and nothing
  * a user does on this page is ever persisted.
+ *
+ * Also hosts the "Download PDF" action (Module 10): triggers server-side
+ * generation of the same artifact via the shared `document_renderer`, then
+ * downloads the result through a signed URL — reusing the existing
+ * `triggerDownload` helper, the same one file downloads already use.
  */
 export function PreviewPage() {
   const { fileId } = useParams<{ fileId: string }>();
@@ -35,6 +42,8 @@ export function PreviewPage() {
   const [isIframeReady, setIsIframeReady] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [selectedField, setSelectedField] = useState<TemplateManifestField | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!fileId) return;
@@ -118,6 +127,24 @@ export function PreviewPage() {
     resolveAssetSources(doc, assetUrls);
   }, [isIframeReady, assetUrls]);
 
+  const handleDownloadPdf = useCallback(async () => {
+    if (!fileId) return;
+    setIsGeneratingPdf(true);
+    setPdfError(null);
+
+    try {
+      const pdf = await pdfService.generateLatest(fileId);
+      const signed = await pdfService.getSignedUrl(fileId, pdf.version);
+      triggerDownload(signed.url, `document-v${pdf.version}.pdf`);
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message : "Failed to generate PDF.";
+      logger.error("Failed to generate or download PDF", { fileId, message });
+      setPdfError(message);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }, [fileId]);
+
   if (!fileId) {
     return <p className="p-6 text-sm text-red-600">No file selected.</p>;
   }
@@ -137,6 +164,17 @@ export function PreviewPage() {
   return (
     <div className="flex h-full w-full">
       <div className="flex-1 overflow-auto bg-gray-100 p-4">
+        <div className="mb-3 flex items-center justify-end gap-2">
+          {pdfError && <span className="text-sm text-red-600">{pdfError}</span>}
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isGeneratingPdf ? "Generating PDF…" : "Download PDF"}
+          </button>
+        </div>
         <iframe
           ref={iframeRef}
           title="Template preview"

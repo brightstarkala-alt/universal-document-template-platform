@@ -1,28 +1,48 @@
 """
 Preview Renderer — Module 9.
 
-Strictly read-only and renderer-only: fetches the latest (or a specific)
-`TemplateArtifact` Module 8 already generated and returns it completely
-unchanged, alongside freshly-minted signed URLs for its assets. This is
-the only new capability Module 9 adds server-side — every other
-interaction (marker detection, hover highlighting, live value overrides,
-the field inspector) happens entirely client-side against this response
-and is never sent back here.
+Strictly read-only: fetches the latest (or a specific) `TemplateArtifact`
+Module 8 already generated and never modifies it in Storage or the
+database — the stored artifact is, and remains, immutable. What this
+module returns to the caller is a *rendered copy* of that artifact: its
+`html` is produced by `app/services/document_renderer.py::render_html`,
+the same shared renderer PDF Generation (Module 10) uses, so there is
+exactly one implementation of "turn a TemplateArtifact into concrete
+HTML" anywhere in the codebase — never two independent ones.
 
-Never regenerates a template, never modifies a `TemplateArtifact`, never
-persists anything a user does in a preview, and never introduces
-coordinate (x/y) positioning — it has no rendering logic of its own beyond
-resolving asset references, which Module 8's own design explicitly
-deferred to "a later module" (see app/schemas/template.py).
+Today's rendering inputs are both defaults, computed fresh on every
+request and never persisted:
+  * a `ValueMap` built from the manifest's own `sample_value`s
+    (`document_renderer.build_default_value_map`) — every field renders
+    with the same text it already had, so this is a no-op for field
+    content.
+  * an `AssetMap` built from freshly-signed Storage URLs (the same map
+    returned as `asset_urls`) — so the response's `<img>` tags carry a
+    real, working `src`, unlike the stored artifact's raw HTML, which
+    never has one (asset resolution has always been deferred past
+    Module 8; Module 9 is where it happens, now via the shared renderer
+    instead of ad hoc string handling).
+
+A future document-filling module supplies a different `ValueMap` (real
+user-entered values instead of samples) to this exact same `render_html`
+call — nothing in this module needs to change when that happens.
+
+Every other interaction (marker detection, hover highlighting, ephemeral
+in-preview value overrides, the field inspector) happens entirely
+client-side against this response and is never sent back here.
+
+Never regenerates a template, never persists anything a user does in a
+preview, and never introduces coordinate (x/y) positioning.
 """
 
 from app.core.config import settings
 from app.core.exceptions import NotFoundError, ValidationAppError
 from app.schemas.file import SignedUrlResponse
 from app.schemas.preview import TemplatePreviewResponse
+from app.schemas.rendering import AssetMap
 from app.schemas.template import TemplateArtifact
 from app.schemas.template_metadata import TemplateMetadata
-from app.services import storage_service, template_engine_service
+from app.services import document_renderer, storage_service, template_engine_service
 
 _ACCEPTABLE_TEMPLATE_STATUSES = {"completed", "completed_with_errors"}
 
@@ -63,10 +83,23 @@ def refresh_asset_url(
 
 def _build_preview_response(metadata: TemplateMetadata) -> TemplatePreviewResponse:
     artifact = _load_artifact(metadata)
-    asset_urls = {
+    asset_urls = _build_asset_urls(artifact)
+
+    value_map = document_renderer.build_default_value_map(artifact.manifest)
+    rendered_html = document_renderer.render_html(artifact.html, value_map, asset_urls)
+    # `artifact` above is what was just read back from Storage, unmodified.
+    # Only this in-memory copy — built for the response only — carries the
+    # rendered html; nothing here is written back to Storage or the
+    # `templates` table.
+    rendered_artifact = artifact.model_copy(update={"html": rendered_html})
+
+    return TemplatePreviewResponse(artifact=rendered_artifact, asset_urls=asset_urls)
+
+
+def _build_asset_urls(artifact: TemplateArtifact) -> AssetMap:
+    return {
         asset.asset_id: _sign_asset(asset.original_path).url for asset in artifact.manifest.assets
     }
-    return TemplatePreviewResponse(artifact=artifact, asset_urls=asset_urls)
 
 
 def _load_artifact(metadata: TemplateMetadata) -> TemplateArtifact:
