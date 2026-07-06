@@ -15,6 +15,11 @@ can put the label and the value in the *same* run — replacing the whole
 run would destroy the label. This is safe because Module 7's
 anti-hallucination check already guarantees `sample_value` is a literal
 substring of the run's text.
+
+A repeating table's single templated `<tr>` also carries `data-row-template`
+alongside `data-repeating-row` — a future row-expansion module can select
+on the more explicit name without needing to know `data-repeating-row` was
+the original spelling; both stay populated for backward compatibility.
 """
 
 from dataclasses import dataclass, field
@@ -287,7 +292,7 @@ def _render_template_row(
     section_key_attr = escape(section_key, quote=True)
     return (
         f'<tr data-section-id="{section_id_attr}" data-section-key="{section_key_attr}" '
-        f'data-repeating-row="true">{"".join(cell_html)}</tr>'
+        f'data-repeating-row="true" data-row-template="true">{"".join(cell_html)}</tr>'
     )
 
 

@@ -173,3 +173,153 @@ export interface TemplateMetadata {
   error_message: string | null;
   created_at: string;
 }
+
+/** Mirrors `backend/app/schemas/ai_extraction.py::FieldType`. */
+export type FieldType =
+  | "text"
+  | "long_text"
+  | "number"
+  | "currency"
+  | "date"
+  | "boolean"
+  | "email"
+  | "phone"
+  | "identifier"
+  | "address"
+  | "signature_image"
+  | "percentage";
+
+/** Mirrors `backend/app/schemas/ai_extraction.py::ConfidenceTier`. */
+export type ConfidenceTier = "high" | "medium" | "low";
+
+/**
+ * One page/sheet entry in a template's manifest (Module 8). `unit_system`
+ * records which physical-sizing rule applies: real points for PDF/DOCX,
+ * pixels for a standalone image, or no physical size at all (row/col
+ * extents only) for an XLSX sheet.
+ */
+export interface TemplateManifestPage {
+  unit_index: number;
+  unit_type: "page" | "sheet";
+  unit_system: "pt" | "px" | "grid";
+  width: number | null;
+  height: number | null;
+  row_count: number | null;
+  col_count: number | null;
+}
+
+/**
+ * One scalar field placed in a template's HTML as a
+ * `<span data-field-id data-machine-key>` marker. `field_id` is immutable
+ * and is the only key a renderer should bind against; `machine_key` is
+ * editable and purely for legibility.
+ */
+export interface TemplateManifestField {
+  field_id: string;
+  machine_key: string;
+  display_label: string;
+  type: FieldType;
+  sample_value: string;
+  confidence: number;
+  confidence_tier: ConfidenceTier;
+  unit_index: number;
+}
+
+export interface TemplateManifestColumn {
+  column_key: string;
+  display_label: string;
+  type: FieldType;
+}
+
+/**
+ * One repeating section (a grid-based line-item table). `section_id` is
+ * immutable (reused from Module 7's `table_id`); `section_key` is
+ * editable. Marked in the HTML as `data-section-id`/`data-section-key` on
+ * a `<tbody>` and its single templated `<tr>`, which also carries
+ * `data-repeating-row="true"` and `data-row-template="true"`.
+ */
+export interface TemplateManifestSection {
+  section_id: string;
+  section_key: string;
+  unit_index: number;
+  columns: TemplateManifestColumn[];
+  sample_row_count: number;
+  confidence: number;
+  confidence_tier: ConfidenceTier;
+}
+
+/**
+ * One image asset. `asset_id` is immutable and identical to Module 6's
+ * `ImageBlock.asset_id` — marked in the HTML as `<img data-asset-id>`.
+ * `original_path` is a stable Storage path, never a signed URL (a signed
+ * URL expires; a stored template must not contain anything that does) —
+ * resolving it to a fetchable URL is the Preview Renderer's job (Module 9).
+ */
+export interface TemplateManifestAsset {
+  asset_id: string;
+  original_path: string;
+  mime_type: string;
+  width: number;
+  height: number;
+  role: "content_image" | "signature";
+}
+
+export interface TemplateManifestMetadata {
+  source_format: string;
+  page_count: number;
+  sheet_count: number;
+  field_count: number;
+  section_count: number;
+  asset_count: number;
+  unmapped_field_count: number;
+  unmapped_section_count: number;
+  duration_ms: number;
+  warnings: string[];
+}
+
+/**
+ * Formal manifest describing everything in a template — fields, repeating
+ * sections, assets, pages, and metadata — so a client never needs to parse
+ * the HTML to know what's in it. Mirrors
+ * `backend/app/schemas/template.py::TemplateManifest`.
+ */
+export interface TemplateManifest {
+  pages: TemplateManifestPage[];
+  fields: TemplateManifestField[];
+  repeating_sections: TemplateManifestSection[];
+  assets: TemplateManifestAsset[];
+  metadata: TemplateManifestMetadata;
+}
+
+/**
+ * The full, persisted template (Module 8). `html` is body-level markup
+ * only (one `<section class="page">` per unit) with no templating syntax
+ * of any kind — only plain `data-*` markers. Combining it with `css` into
+ * a standalone document is a fixed, trivial concatenation:
+ * `<html><head><style>{css}</style></head><body>{html}</body></html>`.
+ * Mirrors `backend/app/schemas/template.py::TemplateArtifact` — a Preview
+ * Renderer (Module 9) must render this exactly as generated, never modify
+ * it.
+ */
+export interface TemplateArtifact {
+  schema_version: string;
+  generator_version: string;
+  source_ai_extraction_id: string;
+  source_parsed_document_id: string;
+  version: number;
+  generated_at: string;
+  html: string;
+  css: string;
+  manifest: TemplateManifest;
+}
+
+/**
+ * Response from a Preview Renderer endpoint (Module 9). `artifact` is
+ * byte-for-byte what Module 8 persisted; `asset_urls` is a sibling map
+ * (asset_id -> short-lived signed URL) resolved fresh on every request —
+ * never baked into the artifact itself.
+ */
+export interface TemplatePreviewResponse {
+  artifact: TemplateArtifact;
+  asset_urls: Record<string, string>;
+}

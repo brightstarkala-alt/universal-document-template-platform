@@ -6,7 +6,16 @@ its router here rather than registering directly on the FastAPI app.
 
 from fastapi import APIRouter
 
-from app.api.v1 import ai_extraction, auth, company, files, health, parsing, template_engine
+from app.api.v1 import (
+    ai_extraction,
+    auth,
+    company,
+    files,
+    health,
+    parsing,
+    preview,
+    template_engine,
+)
 
 api_router = APIRouter()
 api_router.include_router(health.router)
@@ -16,3 +25,4 @@ api_router.include_router(files.router)
 api_router.include_router(parsing.router)
 api_router.include_router(ai_extraction.router)
 api_router.include_router(template_engine.router)
+api_router.include_router(preview.router)

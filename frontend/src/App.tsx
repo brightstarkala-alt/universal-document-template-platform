@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { NotFound } from "@/components/common/NotFound";
 import { HomePage } from "@/routes/HomePage";
+import { PreviewPage } from "@/routes/PreviewPage";
 import { LoginPage } from "@/routes/auth/LoginPage";
 import { ForgotPasswordPage } from "@/routes/auth/ForgotPasswordPage";
 
@@ -20,6 +21,7 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/files/:fileId/preview" element={<PreviewPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

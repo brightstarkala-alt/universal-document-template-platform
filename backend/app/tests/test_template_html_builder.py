@@ -200,6 +200,7 @@ def test_render_unit_marks_exactly_one_template_row_for_repeating_table() -> Non
     )
 
     assert result.html.count('data-repeating-row="true"') == 1
+    assert result.html.count('data-row-template="true"') == 1
     assert 'data-section-id="t1"' in result.html
     assert 'data-section-key="line_items"' in result.html
     assert 'data-column-key="item"' in result.html
@@ -224,6 +225,7 @@ def test_render_unit_renders_static_table_when_not_repeating() -> None:
     )
 
     assert "data-repeating-row" not in result.html
+    assert "data-row-template" not in result.html
     assert "data-section-id" not in result.html
     assert "Widget" in result.html
     assert "Gadget" in result.html
