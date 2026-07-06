@@ -229,7 +229,9 @@ def test_extract_fields_force_skips_cache_lookup() -> None:
 
 
 def test_extract_fields_raises_when_parse_not_ready() -> None:
-    not_ready = FAKE_PARSED_DOCUMENT.model_copy(update={"status": "processing", "storage_path": None})
+    not_ready = FAKE_PARSED_DOCUMENT.model_copy(
+        update={"status": "processing", "storage_path": None}
+    )
 
     with (
         patch(
@@ -319,7 +321,9 @@ def test_get_latest_extraction_returns_metadata() -> None:
         ),
         patch("app.services.ai_extraction_service.get_supabase_admin", return_value=mock_client),
     ):
-        result = ai_extraction_service.get_latest_extraction(company_id="company-1", file_id="file-1")
+        result = ai_extraction_service.get_latest_extraction(
+            company_id="company-1", file_id="file-1"
+        )
 
     assert result.id == "extraction-1"
 

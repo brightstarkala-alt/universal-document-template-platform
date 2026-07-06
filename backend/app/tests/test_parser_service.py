@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.schemas.file import FileMetadata
 from app.services import parser_service
 from app.tests.parser_fixtures import make_png_bytes
@@ -162,3 +162,43 @@ def test_get_latest_parsed_document_raises_not_found_when_never_parsed() -> None
         pytest.raises(NotFoundError),
     ):
         parser_service.get_latest_parsed_document(company_id="company-1", file_id="file-1")
+
+
+def test_get_parsed_document_returns_metadata_by_id() -> None:
+    mock_client = MagicMock()
+    mock_client.table.return_value.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value.data = _row(
+        status="completed"
+    )
+
+    with patch("app.services.parser_service.get_supabase_admin", return_value=mock_client):
+        result = parser_service.get_parsed_document(
+            company_id="company-1", parsed_document_id="parsed-1"
+        )
+
+    assert result.id == "parsed-1"
+
+
+def test_get_parsed_document_raises_not_found_when_missing() -> None:
+    mock_client = MagicMock()
+    mock_client.table.return_value.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value.data = (
+        None
+    )
+
+    with (
+        patch("app.services.parser_service.get_supabase_admin", return_value=mock_client),
+        pytest.raises(NotFoundError),
+    ):
+        parser_service.get_parsed_document(company_id="company-1", parsed_document_id="missing")
+
+
+def test_get_parsed_document_raises_forbidden_when_different_company() -> None:
+    mock_client = MagicMock()
+    mock_client.table.return_value.select.return_value.eq.return_value.maybe_single.return_value.execute.return_value.data = _row(
+        company_id="company-other"
+    )
+
+    with (
+        patch("app.services.parser_service.get_supabase_admin", return_value=mock_client),
+        pytest.raises(ForbiddenError),
+    ):
+        parser_service.get_parsed_document(company_id="company-1", parsed_document_id="parsed-1")

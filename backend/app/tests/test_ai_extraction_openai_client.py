@@ -29,7 +29,9 @@ VALID_RESPONSE = {
 def _completion(content: str, prompt_tokens: int = 10, completion_tokens: int = 5) -> MagicMock:
     completion = MagicMock()
     completion.choices = [MagicMock(message=MagicMock(content=content))]
-    completion.usage = SimpleNamespace(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
+    completion.usage = SimpleNamespace(
+        prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+    )
     return completion
 
 

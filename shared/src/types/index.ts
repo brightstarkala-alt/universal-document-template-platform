@@ -143,3 +143,33 @@ export interface AIExtractionMetadata {
   error_message: string | null;
   created_at: string;
 }
+
+/**
+ * Metadata for one template-generation attempt (Module 8: Template
+ * Engine). Mirrors `backend/app/schemas/template_metadata.py::TemplateMetadata`
+ * and the `templates` table (`backend/sql/010_templates.sql`). Every
+ * template is versioned and append-only — a re-run never overwrites a
+ * previous `version`. The full template artifact (`{ html, css, manifest }`
+ * as one JSON object — see `backend/app/schemas/template.py::TemplateArtifact`)
+ * is not modeled here — a later rendering module reads it server-side from
+ * `storage_path`, not through this frontend type.
+ */
+export interface TemplateMetadata {
+  id: string;
+  company_id: string;
+  file_id: string;
+  source_ai_extraction_id: string;
+  source_parsed_document_id: string;
+  version: number;
+  schema_version: string;
+  generator_version: string;
+  status: "pending" | "processing" | "completed" | "completed_with_errors" | "failed";
+  storage_path: string | null;
+  field_count: number | null;
+  section_count: number | null;
+  asset_count: number | null;
+  page_count: number | null;
+  duration_ms: number | null;
+  error_message: string | null;
+  created_at: string;
+}

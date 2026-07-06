@@ -90,6 +90,16 @@ class ExtractionValidationError(AIExtractionError):
     code = "EXTRACTION_VALIDATION_ERROR"
 
 
+class TemplateGenerationError(AppException):
+    """Raised for internal Module 8 (Template Engine) failures. Unlike
+    Module 7, there is no external dependency here (no OpenAI call, no
+    re-parsing) — a failure is either malformed upstream data or a genuine
+    bug, not something to retry, so it maps to 500 rather than 502."""
+
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    code = "TEMPLATE_GENERATION_ERROR"
+
+
 def build_error_body(
     request: Request, code: str, message: str, details: dict[str, Any] | None = None
 ) -> dict[str, Any]:

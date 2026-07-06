@@ -19,7 +19,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.core.logging import get_logger
 from app.core.supabase import get_supabase_admin
 from app.schemas.document_model import (
@@ -158,6 +158,28 @@ def get_latest_parsed_document(*, company_id: str, file_id: str) -> ParsedDocume
     row: dict[str, Any] | None = response.data if response else None
     if not row:
         raise NotFoundError("This file has not been parsed yet.")
+    return ParsedDocumentMetadata(**row)
+
+
+def get_parsed_document(*, company_id: str, parsed_document_id: str) -> ParsedDocumentMetadata:
+    """Fetches one specific parse attempt by id — not just "whatever is
+    latest right now". Needed by later modules (AI Extraction, Template
+    Engine) that must keep using the exact `UniversalDocumentModel` an
+    earlier stage was built from, even if the file has since been re-parsed
+    and a newer `parsed_documents` row now exists."""
+    client = get_supabase_admin()
+    response = (
+        client.table("parsed_documents")
+        .select("*")
+        .eq("id", parsed_document_id)
+        .maybe_single()
+        .execute()
+    )
+    row: dict[str, Any] | None = response.data if response else None
+    if not row:
+        raise NotFoundError("Parsed document not found.")
+    if row["company_id"] != company_id:
+        raise ForbiddenError("This parsed document does not belong to your company.")
     return ParsedDocumentMetadata(**row)
 
 
